@@ -76,6 +76,10 @@ function Client(manager, name, config) {
 		id: id++,
 		name: name,
 		networks: [],
+		push: { // TODO: This should not ship
+			currentCount: 0,
+			lastPushDate: Date.now(),
+		},
 		sockets: manager.sockets,
 		manager: manager
 	});
@@ -94,10 +98,20 @@ function Client(manager, name, config) {
 		client.config.sessions = {};
 	}
 
+	_.forOwn(client.config.sessions, (session) => {
+		if (session.pushSubscription) {
+			this.registerPushSubscription(session, session.pushSubscription, true);
+		}
+	});
+
 	if (client.name) {
 		log.info(`User ${colors.bold(client.name)} loaded`);
 	}
 }
+
+Client.prototype.isRegistered = function() {
+	return this.name.length > 0;
+};
 
 Client.prototype.emit = function(event, data) {
 	if (this.sockets !== null) {
@@ -532,6 +546,44 @@ Client.prototype.clientDetach = function(socketId) {
 			}
 		});
 	}
+};
+
+Client.prototype.registerPushSubscription = function(session, subscription, noSave) {
+	if (!_.isPlainObject(subscription) || !_.isPlainObject(subscription.keys)
+	|| typeof subscription.endpoint !== "string" || !/^https?:\/\//.test(subscription.endpoint)
+	|| typeof subscription.keys.p256dh !== "string" || typeof subscription.keys.auth !== "string") {
+		session.pushSubscription = null;
+		return;
+	}
+
+	const data = {
+		endpoint: subscription.endpoint,
+		keys: {
+			p256dh: subscription.keys.p256dh,
+			auth: subscription.keys.auth
+		}
+	};
+
+	session.pushSubscription = data;
+
+	if (!noSave) {
+		this.manager.updateUser(this.name, {
+			sessions: this.config.sessions
+		});
+	}
+
+	log.debug(`Subscribed ${this.name} to ${subscription.endpoint}`);
+
+	return data;
+};
+
+Client.prototype.unregisterPushSubscription = function(token) {
+	this.config.sessions[token].pushSubscription = null;
+	this.manager.updateUser(this.name, {
+		sessions: this.config.sessions
+	});
+
+	log.debug(`Unsubscribed ${this.name}`);
 };
 
 Client.prototype.save = _.debounce(function SaveClient() {
