@@ -1,15 +1,22 @@
 "use strict";
 
-var ClientManager = new require("../clientManager");
-var fs = require("fs");
-var program = require("commander");
-var colors = require("colors/safe");
-var Helper = require("../helper");
+const colors = require("colors/safe");
+const program = require("commander");
+const fs = require("fs");
 
 program
 	.command("reset <name>")
 	.description("Reset user password")
 	.action(function(name) {
+		const Helper = require("../helper");
+
+		if (!fs.existsSync(Helper.USERS_PATH)) {
+			log.error(`${Helper.USERS_PATH} does not exist.`);
+			return;
+		}
+
+		const ClientManager = require("../clientManager");
+
 		var users = new ClientManager().getUsers();
 		if (users.indexOf(name) === -1) {
 			log.error(`User ${colors.bold(name)} does not exist.`);

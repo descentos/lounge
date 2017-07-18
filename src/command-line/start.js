@@ -1,10 +1,11 @@
 "use strict";
 
-var ClientManager = new require("../clientManager");
-var program = require("commander");
-var colors = require("colors/safe");
-var server = require("../server");
-var Helper = require("../helper");
+const colors = require("colors/safe");
+const fs = require("fs");
+const fsextra = require("fs-extra");
+const path = require("path");
+const program = require("commander");
+const Helper = require("../helper");
 
 program
 	.command("start")
@@ -15,6 +16,11 @@ program
 	.option("    --private", "start in private mode")
 	.description("Start the server")
 	.action(function(options) {
+		initalizeConfig();
+
+		const ClientManager = require("../clientManager");
+		const server = require("../server");
+
 		var users = new ClientManager().getUsers();
 
 		var mode = Helper.config.public;
@@ -38,3 +44,20 @@ program
 
 		server();
 	});
+
+function initalizeConfig() {
+	if (!fs.existsSync(Helper.CONFIG_PATH)) {
+		fsextra.ensureDirSync(Helper.HOME);
+		fs.chmodSync(Helper.HOME, "0700");
+		fsextra.copySync(path.resolve(path.join(
+			__dirname,
+			"..",
+			"..",
+			"defaults",
+			"config.js"
+		)), Helper.CONFIG_PATH);
+		log.info(`Configuration file created at ${colors.green(Helper.CONFIG_PATH)}.`);
+	}
+
+	fsextra.ensureDirSync(Helper.USERS_PATH);
+}

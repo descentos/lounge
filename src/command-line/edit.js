@@ -1,15 +1,22 @@
 "use strict";
 
-var ClientManager = new require("../clientManager");
-var program = require("commander");
-var child = require("child_process");
-var colors = require("colors/safe");
-var Helper = require("../helper");
+const program = require("commander");
+const child = require("child_process");
+const colors = require("colors/safe");
+const fs = require("fs");
+const Helper = require("../helper");
 
 program
 	.command("edit <name>")
 	.description(`Edit user file located at ${colors.green(Helper.getUserConfigPath("<name>"))}.`)
 	.action(function(name) {
+		if (!fs.existsSync(Helper.USERS_PATH)) {
+			log.error(`${Helper.USERS_PATH} does not exist.`);
+			return;
+		}
+
+		const ClientManager = require("../clientManager");
+
 		var users = new ClientManager().getUsers();
 		if (users.indexOf(name) === -1) {
 			log.error(`User ${colors.bold(name)} does not exist.`);
