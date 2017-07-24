@@ -280,6 +280,14 @@ function init(socket, client) {
 				client.names(data);
 			}
 		);
+
+		socket.on("msg:preview:toggle", function(data) {
+			const chan = client.find(data.target).chan;
+			const message = chan.findMessage(data.msgId);
+			const preview = message.findPreview(data.link);
+			preview.shown = data.shown;
+		});
+
 		socket.join(client.id);
 		socket.emit("init", {
 			active: client.lastActiveChannel,
